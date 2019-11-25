@@ -81,7 +81,7 @@ Display display;
 ArrayList <RailItem> railItems = new ArrayList();
 
 void setup() {
-  display = new Display(5, 5, 1014, 374);
+	display = new Display(5, 5, 1014, 374);
 	textAlign(CENTER,CENTER);
 	textSize(8);
 	gridSize = 35;
@@ -104,8 +104,8 @@ void setup() {
 	printArray(Serial.list());
 	String portName = Serial.list()[0];
 	serial = new Serial(this, portName, 115200);
-  delay(5000);
-  while(serial.available() > 0) serial.read();} 
+	delay(10000);
+	while(serial.available() > 0) serial.read();} 
 
 void draw() {
 	readSerialBus();
@@ -164,9 +164,9 @@ void readSerialBus() {
 		
 		switch(Mode) {
 			case idle: Mode = b; break;
-			case memoryInstruction:		 if(memoryInstructionF(b)) resetBus(); break;
-			case decouplerInstruction:	if(decouplerInstructionF(b))	resetBus(); break;
-			case detectorInstruction:	 if(detectorInstructionF(b)) resetBus(); break;
+			case memoryInstruction:		if(memoryInstructionF(b)) 		resetBus(); break;
+			case decouplerInstruction:  if(decouplerInstructionF(b))	resetBus(); break;
+			case detectorInstruction:	if(detectorInstructionF(b)) 	resetBus(); break;
 		}
 	}
 }
@@ -178,17 +178,17 @@ boolean memoryInstructionF(int b) {
 		break;
 		
 		case 1: // memory state
-    for (int i = 0; i < railItems.size(); i++) { 
-      RailItem anyClass = railItems.get(i);                                 
-      if((anyClass instanceof Memory)) {
-        if(anyClass.getID() == ID) {
-          println("memory ID = " + ID);
-          clearMemoryStates();
-          anyClass.setState(1);
-          setSwitches(anyClass);
-          return true; } } }
-    return true; }
-  return false; }
+		for (int i = 0; i < railItems.size(); i++) { 
+			RailItem anyClass = railItems.get(i);                                 
+			if((anyClass instanceof Memory)) {
+				if(anyClass.getID() == ID) {
+					println("memory ID = " + ID);
+					clearMemoryStates();
+					anyClass.setState(1);
+					setSwitches(anyClass);
+					return true; } } }
+		return true; }
+	return false; }
 
 boolean decouplerInstructionF(int b) {
 	switch(caseSelector++) {
@@ -201,10 +201,9 @@ boolean decouplerInstructionF(int b) {
 			RailItem anyClass = railItems.get(i);																		 
 			if(anyClass instanceof Decoupler){
 				if(anyClass.getID() == ID) {
-					anyClass.setState(b); }
-				else {
-					anyClass.setState(0); }
-        return true; } } }
+					if(b == 1)	anyClass.setState(1);
+					else		anyClass.setState(0); } } }
+        return true; }
 	return false; }
 
 boolean detectorInstructionF(int b) {
@@ -217,10 +216,10 @@ boolean detectorInstructionF(int b) {
 		for (int i = 0; i < railItems.size(); i++) { 
 			RailItem anyClass = railItems.get(i);																 
 			if((anyClass instanceof Detection)) {
-        if(anyClass.getID() == ID) {
-				  anyClass.setState(b); 
-          return true; } } }
-    return true; }
+                if(anyClass.getID() == ID) {
+        			anyClass.setState(b); 
+        			return true; } } }
+        return true; }
 	return false; }
 
 void clearMemoryStates() {
