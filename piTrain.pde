@@ -102,10 +102,12 @@ void setup() {
 	loadLayout();
 	
 	printArray(Serial.list());
-	String portName = Serial.list()[0];
+	String portName = Serial.list()[1];
 	serial = new Serial(this, portName, 115200);
-	delay(10000);
-	while(serial.available() > 0) serial.read();} 
+	delay(3000);
+	while(serial.available() > 0) serial.read();
+	resetBus();
+} 
 
 void draw() {
 	readSerialBus();
@@ -160,12 +162,12 @@ void resetBus() {
 void readSerialBus() {
 	if(serial.available() > 0) {
 		int b = serial.read();
-		println(b);
+		//println(b);
 		
 		switch(Mode) {
 			case idle: Mode = b; break;
 			case memoryInstruction:		if(memoryInstructionF(b)) 		resetBus(); break;
-			case decouplerInstruction:  if(decouplerInstructionF(b))	resetBus(); break;
+			case decouplerInstruction:	if(decouplerInstructionF(b))	resetBus(); break;
 			case detectorInstruction:	if(detectorInstructionF(b)) 	resetBus(); break;
 		}
 	}
@@ -175,6 +177,7 @@ boolean memoryInstructionF(int b) {
 	switch(caseSelector++) {
 		case 0: // memory ID
 		ID = b;
+		//print("memory " + ID + "activated");
 		break;
 		
 		case 1: // memory state
@@ -182,7 +185,7 @@ boolean memoryInstructionF(int b) {
 			RailItem anyClass = railItems.get(i);                                 
 			if((anyClass instanceof Memory)) {
 				if(anyClass.getID() == ID) {
-					println("memory ID = " + ID);
+					//println("memory ID = " + ID);
 					clearMemoryStates();
 					anyClass.setState(1);
 					setSwitches(anyClass);
@@ -193,6 +196,7 @@ boolean memoryInstructionF(int b) {
 boolean decouplerInstructionF(int b) {
 	switch(caseSelector++) {
 		case 0: // decoupler ID
+		print("decoupler " + ID + "activated");
 		ID = b;
 		break;
 		
@@ -252,12 +256,23 @@ void mousePressed()
 	
 	switch(mode) { 
 		case play:
-		if(anyClass instanceof Switch) {	Switch sw = (Switch) anyClass; sw.triggered(); println("SWITCH ACTIVATED"); }
+		if(anyClass instanceof Switch) {	
+			Switch sw = (Switch) anyClass; 
+			serial.write( turnoutInstruction );
+			serial.write(sw.ID);
+			
+			if( sw.triggered() > 0 ) {
+				serial.write(1);
+			}
+			else {
+				serial.write(1);
+      }
+      println("SWITCH ACTIVATED"); }
+      
 		if(anyClass instanceof Memory) {	
-      //setSwitches(anyClass); 
-      clearMemoryStates();
-      anyClass.setState(1);
-      setSwitches(anyClass);}
+			clearMemoryStates();
+			anyClass.setState(1);
+			setSwitches(anyClass);}
 		break;
 		
 		case settingID:
@@ -306,8 +321,12 @@ void setSwitches(RailItem anyClass) {
 			try{
 				for(int k=0;k<255;k++) {
 					anyClass = railItems.get(k);									 // use anyClass to select all switches
-					if(tmp == anyClass.getID() && anyClass instanceof Switch) {									// compares the elements out if the array with all switches' IDs
-						anyClass.setState(tmpStates[j]);}}}																					 // set the state of the switch to the elements out of the array
+					if(tmp == anyClass.getID() && anyClass instanceof Switch) {		// compares the elements out if the array with all switches' IDs
+						serial.write(3);
+						serial.write(tmp);
+						serial.write(tmpStates[j]);
+						
+						anyClass.setState(tmpStates[j]); } } }																					 // set the state of the switch to the elements out of the array
 						//serial.write(turnoutInstruction); //println(turnoutInstruction);
 						//serial.write(tmp);// println(tmp);
 						//serial.write(tmpStates[j]); /*println(tmpStates[j]);*/ } } }
