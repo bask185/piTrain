@@ -3,8 +3,7 @@
 	// variables
 		
 	// constructor
-	Switch(int ID, int Xpos, int Ypos, int direction, int type, int gridSize, int state)
-	{
+	Switch(int ID, int Xpos, int Ypos, int direction, int type, int gridSize, int state) {
 		super(Xpos, Ypos, direction, gridSize);
 		this.type = type;
 		this.ID = ID;
@@ -23,6 +22,7 @@
 
 	void Draw()
 	{
+		fill(0);
 		switch(direction) {
 		case 0: // 
 		text(designation,Xpos+quarterSize,Ypos);

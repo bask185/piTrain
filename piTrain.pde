@@ -26,6 +26,7 @@ boolean memorySelected = false;
 boolean menu_bool = false;
 
 final int	idle = 1;
+final int 	signalInstruction = 1;
 final int	decouplerInstruction = 2;
 final int	turnoutInstruction = 3;
 final int	detectorInstruction = 4;
@@ -73,6 +74,7 @@ Curve c1;
 Detection d1;
 Memory m1;
 Decoupler D1;
+Signal S1;
 
 //SSP ssp1;
 Display display;
@@ -90,13 +92,14 @@ void setup() {
 	background(255);
 	//fullScreen();
  
-	sw1 = new Switch(	 0,(width-gridSize-edgeOffset)/gridSize, 0, 2, 1, gridSize, 1); // make default Objects to display on the right side of the UI
-	sw2 = new Switch(	 0,(width-gridSize-edgeOffset)/gridSize, 1, 2, 2, gridSize, 1);
-	l1 = new Line(			(width-gridSize-edgeOffset)/gridSize, 2, 2, gridSize);
-	c1 = new Curve(		(width-gridSize-edgeOffset)/gridSize, 3, 2, gridSize);
-	d1 = new Detection(0,(width-gridSize-edgeOffset)/gridSize, 4, 2, gridSize);
-	m1 = new Memory(	 0,(width-gridSize-edgeOffset)/gridSize, 5, 2, gridSize);
-	D1 = new Decoupler(0,(width-gridSize-edgeOffset)/gridSize, 6, 2, gridSize);
+	sw1 = new Switch(	0,	(width-gridSize-edgeOffset) / gridSize, 0, 2, 1, gridSize, 1); // make default Objects to display on the right side of the UI
+	sw2 = new Switch(	0,	(width-gridSize-edgeOffset) / gridSize, 1, 2, 2, gridSize, 1);
+	l1 =  new Line(			(width-gridSize-edgeOffset) / gridSize, 2, 2,    gridSize);
+	c1 =  new Curve(		(width-gridSize-edgeOffset) / gridSize, 3, 2,    gridSize);
+	d1 =  new Detection(0,	(width-gridSize-edgeOffset) / gridSize, 4, 2,    gridSize);
+	m1 =  new Memory(	0,	(width-gridSize-edgeOffset) / gridSize, 5, 2,    gridSize);
+	D1 =  new Decoupler(0,	(width-gridSize-edgeOffset) / gridSize, 6, 2,    gridSize);
+	S1 =  new Signal(   0,  (width-gridSize-edgeOffset) / gridSize, 7, 0,    gridSize, 0);
 //ssp1 = new SSP("ssp1.txt");
 	
 	loadLayout();
@@ -130,15 +133,17 @@ void draw() {
 	d1.Draw();
 	m1.Draw();
 	D1.Draw();
+	S1.Draw();
 	
 	for (int i = 0; i < railItems.size(); i++) {	
 		RailItem anyClass = railItems.get(i);
-		if(anyClass instanceof Switch) {	Switch sw = (Switch) anyClass; sw.Draw();}
-		if(anyClass instanceof Detection) {Detection det = (Detection) anyClass; det.Draw();}
-		if(anyClass instanceof Line) { Line ln = (Line) anyClass; ln.Draw();}
-		if(anyClass instanceof Curve) { Curve cv = (Curve) anyClass; cv.Draw();}
-		if(anyClass instanceof Memory) { Memory mem = (Memory) anyClass; mem.Draw();}
-		if(anyClass instanceof Decoupler) { Decoupler dec = (Decoupler) anyClass; dec.Draw();} }
+		if(anyClass instanceof Switch) 	  { Switch sw = (Switch) anyClass; sw.Draw();}
+		if(anyClass instanceof Detection) { Detection det = (Detection) anyClass; det.Draw();}
+		if(anyClass instanceof Line) 	  { Line ln = (Line) anyClass; ln.Draw();}
+		if(anyClass instanceof Curve) 	  { Curve cv = (Curve) anyClass; cv.Draw();}
+		if(anyClass instanceof Memory) 	  { Memory mem = (Memory) anyClass; mem.Draw();}
+		if(anyClass instanceof Decoupler) { Decoupler dec = (Decoupler) anyClass; dec.Draw();}
+		if(anyClass instanceof Signal) 	  { Signal sig = (Signal) anyClass; sig.Draw();} }
 	
 	fill(0);
 	textSize(gridSize / 4);
@@ -166,7 +171,7 @@ void readSerialBus() {
 		
 		switch(Mode) {
 			case idle: Mode = b; break;
-			case memoryInstruction:		if(memoryInstructionF(b)) 		resetBus(); break;
+			case memoryInstruction:	  	if(memoryInstructionF(b)) 		resetBus(); break;
 			case decouplerInstruction:	if(decouplerInstructionF(b))	resetBus(); break;
 			case detectorInstruction:	if(detectorInstructionF(b)) 	resetBus(); break;
 		}
@@ -243,12 +248,13 @@ void mousePressed()
 		if(column == anyClass.getColumn() && row == anyClass.getRow()) {	// get index of clicked item	 
 			locked = true;
 			index = i;
-			if(anyClass instanceof Switch) print("SWITCH ");
-			if(anyClass instanceof Line)	 print("LINE ");
-			if(anyClass instanceof Curve) print("CURVE ");
-			if(anyClass instanceof Memory) print("MEMORY ");
-			if(anyClass instanceof Detection) print("DETECTOR ");
-			if(anyClass instanceof Detection) print("DECOUPLER ");
+			if(anyClass instanceof Switch) 		print("SWITCH ");
+			if(anyClass instanceof Line)	 	print("LINE ");
+			if(anyClass instanceof Curve) 		print("CURVE ");
+			if(anyClass instanceof Memory) 		print("MEMORY ");
+			if(anyClass instanceof Detection) 	print("DETECTOR ");
+			if(anyClass instanceof Detection) 	print("DECOUPLER ");
+			if(anyClass instanceof Signal) 		print("SIGNAL ");
 			println("SELECTED");
 			break;
 		} 
@@ -256,20 +262,33 @@ void mousePressed()
 	
 	switch(mode) { 
 		case play:
-		if(anyClass instanceof Switch) {	
+		if( anyClass instanceof Signal) {
+			println("SIGNAL ACTIVATED"); 
+			Signal sg = (Signal) anyClass;
+
+			serial.write( signalInstruction );
+			serial.write(sg.ID);
+
+			if( sg.triggered() > 0 ) {
+				serial.write(1);
+			}
+			else {
+				serial.write(0);
+			}
+		} 
+
+		if(anyClass instanceof Switch) {
+			println("SWITCH ACTIVATED"); 	
 			Switch sw = (Switch) anyClass; 
 			serial.write( turnoutInstruction );
 			serial.write(sw.ID);
 			
-			if( sw.triggered() > 0 ) {
-				serial.write(1);
-			}
-			else {
-				serial.write(1);
-      }
-      println("SWITCH ACTIVATED"); }
+			if( sw.triggered() > 0 ) { serial.write(1); }
+			else 					 { serial.write(0); }
+		}
       
 		if(anyClass instanceof Memory) {	
+			println("MEMORY ACTIVATED"); 
 			clearMemoryStates();
 			anyClass.setState(1);
 			setSwitches(anyClass);}
@@ -291,13 +310,14 @@ void mousePressed()
 			locked = true;
 			println("new item created");
 			switch(row) {
-				case 0: railItems.add( new Switch(0,(width-2*gridSize)/gridSize,0,2,left,gridSize, 1) ); println("SWITCH CREATED"); break;
-				case 1: railItems.add( new Switch(0,(width-2*gridSize)/gridSize,0,2,right,gridSize, 1) ); println("SWITCH CREATED"); break;
-				case 2: railItems.add( new Line((width-2*gridSize)/gridSize,2, 2, gridSize) ); println("LINE CREATED"); break;
-				case 3: railItems.add( new Curve((width-2*gridSize)/gridSize, 3, 2, gridSize) ); println("CURVE CREATED"); break;
-				case 4: railItems.add( new Detection(0,(width-2*gridSize)/gridSize, 4, 2, gridSize) ); println("DETECTOR CREATED"); break;
-				case 5: railItems.add( new Memory(0,(width-gridSize-edgeOffset)/gridSize,5, 0, gridSize) );println("MEMORY CREATED"); break;
-				case 6: railItems.add( new Decoupler(0,(width-gridSize-edgeOffset)/gridSize,5, 0, gridSize) );println("DECOUPLER CREATED"); break;
+				case 0: railItems.add( new Switch(      0,(width-2*gridSize)/gridSize,0,2,left,gridSize, 1) );println("SWITCH CREATED");    break;
+				case 1: railItems.add( new Switch(     0,(width-2*gridSize)/gridSize,0,2,right,gridSize, 1) );println("SWITCH CREATED");    break;
+				case 2: railItems.add( new Line(                (width-2*gridSize)/gridSize,2, 2, gridSize) );println("LINE CREATED");      break;
+				case 3: railItems.add( new Curve(              (width-2*gridSize)/gridSize, 3, 2, gridSize) );println("CURVE CREATED");     break;
+				case 4: railItems.add( new Detection(        0,(width-2*gridSize)/gridSize, 4, 2, gridSize) );println("DETECTOR CREATED");  break;
+				case 5: railItems.add( new Memory(   0,(width-gridSize-edgeOffset)/gridSize,5, 0, gridSize) );println("MEMORY CREATED");    break;
+				case 6: railItems.add( new Decoupler(0,(width-gridSize-edgeOffset)/gridSize,6, 0, gridSize) );println("DECOUPLER CREATED"); break;
+				case 7: railItems.add( new Signal(0,(width-gridSize-edgeOffset) / gridSize, 7, 0,gridSize,0));println("SIGNAL CREATED");   break;
 			}
 			index = railItems.size() - 1;
 		}

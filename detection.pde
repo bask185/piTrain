@@ -18,6 +18,7 @@ class Detection extends RailItem
  
   void Draw()
   {
+    fill(0);
     if(direction>3)direction-=4;
     switch(direction){
       case 2:
