@@ -556,18 +556,29 @@ void saveLayout() {
 	output.println(railItems.size());
 	for (int i = 0; i < railItems.size(); i++) {
 		RailItem anyClass = railItems.get(i);
-		if(anyClass instanceof Switch)		 output.println(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + "," + anyClass.getType()+ ","); 
-		if(anyClass instanceof Line)			 output.println(anyClass.getItem() + ","	+ 0								+ "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ","); 
-		if(anyClass instanceof Curve)			output.println(anyClass.getItem() + ","	+ 0								+ "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ","); 
-		if(anyClass instanceof Detection)	output.println(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ",");
+		if(anyClass instanceof Switch)		output.println(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + "," + anyClass.getType()+ ","); 
+		if(anyClass instanceof Line)		output.println(anyClass.getItem() + ","	+ 0	               + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ","); 
+		if(anyClass instanceof Curve)		output.println(anyClass.getItem() + ","	+ 0	               + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ","); 
+		if(anyClass instanceof Signal)	    output.println(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ",");
 		if(anyClass instanceof Decoupler)	output.println(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ",");
-		if(anyClass instanceof Memory)	 { output.print	(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ","); 
+		if(anyClass instanceof Memory)	 {  output.print  (anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ","); 
 			Memory mem = (Memory) anyClass;
 			int[] tmpSwitches = mem.getSwitches();
 			int[] tmpStates = mem.getStates();
 			for(int j=0;j<255;j++) {
 				if(tmpSwitches[j]!=0) {	// if we have a switch
 					output.print(tmpSwitches[j] + "," + tmpStates[j] + ",");
+				}
+			}
+			output.println();
+		}
+        if(anyClass instanceof Detection){	output.println(anyClass.getItem() + ","	+ anyClass.getID() + "," + anyClass.getColumn()	+ "," + anyClass.getRow()+ "," + anyClass.getDirection() + "," + anyClass.getState() + ",");
+            Detection det = (Detection) anyClass;
+			int[] tmpSignals = det.getSignals();
+			int[] tmpStates = det.getStates();
+			for(int j=0;j<255;j++) {
+				if(tmpSignals[j]!=0) {	// if we have a switch
+					output.print(tmpSignals[j] + "," + tmpStates[j] + ",");
 				}
 			}
 			output.println();
