@@ -60,7 +60,7 @@ class Button {
     if(mousePressed == true && mouseButton == LEFT && mouseX > Xmin && mouseX < Xmax && mouseY > Ymin && mouseY < Ymax) {  // if LMB is pressed and the mouse is within the borders of the button....
       if(PIGS_CAN_FLY == true) {    // sends a character, if statements make sure that one char is send per button press
         if( c != 0){                // 'c' of the special event buttons is 0, so this line means: if button is not special event button...
-          serial.write(c);          // send 'c' over the serial port
+          //serial.write(c);          // send 'c' over the serial port
           println(hex(c) + " >>");  // feedback print function so you can monitor that what you send
           PIGS_CAN_FLY = false;    // ensures that this function only gets called 1 time, per buttonpress
         }

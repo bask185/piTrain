@@ -65,5 +65,3 @@ class Detection extends RailItem
         signalStates[signalIndex++] = state;
     }
 }
-
-

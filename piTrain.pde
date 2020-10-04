@@ -1,12 +1,15 @@
 import processing.serial.*;
-Serial serial;	
+
+Serial rs485;	
+Serial handController;
+Serial dccCentral;
 
 /* next things to do
     * train controller 
     * SSP 
     * make route determenation (detect links between parts)
     * make special crossing part for 4 servo's N.B propably not needed if switches can share the same ID
-    * perhaps make serial interface in order to initialize the arduino boards. Terminal, highly recommendable to do so
+    * perhaps make rs485 interface in order to initialize the arduino boards. Terminal, highly recommendable to do so
     * make a stop section to mark end of track
     * fix switch's graphics remove black line and move white line
     * be able to remove (set ID to 0) or modify the state of a switch in a memory
@@ -69,6 +72,9 @@ int edgeOffset = 23;
 boolean assignID_bool = false;
 int number = 0;
 
+long handControllerTimeout;
+boolean handControllerConnected = false;
+
 Switch sw1;
 Switch sw2;
 Line l1;
@@ -80,11 +86,15 @@ Signal S1;
 
 //SSP ssp1;
 Display display;
-
+boolean debug = true ;
 
 ArrayList <RailItem> railItems = new ArrayList();
 
+
 void setup() {
+    
+  
+    int dcc_index = 0, rs485_index = 0;
     display = new Display(5, 5, 1014, 374);
     textAlign(CENTER,CENTER);
     textSize(8);
@@ -105,17 +115,128 @@ void setup() {
 //ssp1 = new SSP("ssp1.txt");
     
     loadLayout();
-    
-    printArray(Serial.list());
-    String portName = Serial.list()[1];
-    serial = new Serial(this, portName, 115200);
-    delay(3000);
-    while(serial.available() > 0) serial.read();
-    resetBus();
+    if( !debug ) {
+    //printArray(Serial.list());
+
+      for( byte i = 0; i < Serial.list().length; i++) { // WORKS 
+          println(i + " " + Serial.list()[i]);
+  
+          if( Serial.list()[i].charAt(8) == 'U' ) {
+              dcc_index = i;
+              rs485_index = i + 1;
+              break;
+          }
+      }
+      println("setting up connecton with DCC central");
+      dccCentral = new Serial(this, Serial.list()[dcc_index], 115200);
+      
+      
+      while( dccCentral.available() < 5 ) {
+          int ammount = dccCentral.available();
+          delay(1);
+          if( ammount  >= 5) break;
+          if(millis() > 10000 ) {
+              println("timeout occured");
+              break;
+          }
+      }
+      println(dccCentral.available());
+      String respons = "";
+      for( int i = 0 ; i < 5 ; i ++ ) {
+          respons += (char)dccCentral.read();
+      }
+      println("respons = " + respons);
+      if( respons.charAt(0) == 'h' 
+      &&  respons.charAt(1) == 'e' 
+      &&  respons.charAt(2) == 'l' 
+      &&  respons.charAt(3) == 'l' 
+      &&  respons.charAt(4) == 'o' ) 
+      { 
+          println("respons confirmed, connection with DCC central established");
+      }
+      else {
+          rs485_index--; // swap USB ports in the event of failed communication
+          dcc_index++;
+          dccCentral.stop();
+          dccCentral = new Serial(this, Serial.list()[dcc_index], 115200);
+      }
+      println("setting up connecton with RS485 bus");
+      rs485           = new Serial(this, Serial.list()[rs485_index], 115200);
+      println("connecton set up!");
+      
+      
+  
+      handController = new Serial( this , "/dev/rfcomm0" , 9600 );
+      handControllerConnected = true;
+  
+      //println("connecton started");
+      //handController.write("$$9");
+      //dccCentral.write("g0");
+  
+      //delay(3000);
+      while(rs485.available() > 0) rs485.read();
+      resetBus();
+      handControllerTimeout = millis() + 5000 ;
+  }
 } 
 
+void handShaking() {
+    int b;
+
+    if( handController.available() > 0 ) {
+        if( handControllerConnected == false ) {
+            handControllerConnected = true;
+            println("connection with handcontroller established!");
+        }
+
+        b = handController.read();
+        dccCentral.write( b );
+        println("controller: " + (char) b );
+
+        handControllerTimeout = millis() + 5000 ;
+    }
+
+    if(dccCentral.available() > 0 ) {
+        b = dccCentral.read();
+        handController.write( b );
+        println("central: " + (char) b );
+    }
+
+    if( millis() > handControllerTimeout ) {
+
+        if( handControllerConnected == true ) {
+            handControllerConnected = false;
+            println("connection with hand controller lost!");
+            handControllerTimeout = millis() + 5000 ;
+        }
+        else {
+            try {
+                handController.stop();
+            }
+            catch ( NullPointerException  e) {
+                println(" error terminating connection ");
+            }
+            try {
+                handController = new Serial( this , "/dev/rfcomm0" , 9600 );
+                handController.write('$');
+                handController.write('$');
+                handController.write('9');
+                println("attempting to connect with hand controller...");
+            } 
+            catch(Exception e){
+                println("error cannot set up hand controller connection");
+            }
+            handControllerTimeout = millis() + 10000 ;
+        }
+    }
+}
+
 void draw() {
-    readSerialBus();
+
+    if( !debug) {
+        handShaking();
+        readSerialBus();
+    }
 
     //ssp1.runCommands();
     fill(255);
@@ -163,12 +284,12 @@ void drawGrid() {
 void resetBus() {
     Mode = idle;
     caseSelector = 0;
-    println("serial bus cleared");
+    println("rs485 bus cleared");
 }
 
 void readSerialBus() {
-    if(serial.available() > 0) {
-        int b = serial.read();
+    if(rs485.available() > 0) {
+        int b = rs485.read();
         println(b);
         
         switch(Mode) {
@@ -269,25 +390,25 @@ void mousePressed()
             println("SIGNAL ACTIVATED"); 
             Signal sg = (Signal) anyClass;
 
-            serial.write( signalInstruction );
-            serial.write(sg.ID);
+            rs485.write( signalInstruction );
+            rs485.write(sg.ID);
 
             if( sg.triggered() > 0 ) {
-                serial.write(1);
+                rs485.write(1);
             }
             else {
-                serial.write(0);
+                rs485.write(0);
             }
         } 
 
         if(anyClass instanceof Switch) {
             println("SWITCH ACTIVATED"); 	
             Switch sw = (Switch) anyClass; 
-            serial.write( turnoutInstruction );
-            serial.write(sw.ID);
+            rs485.write( turnoutInstruction );
+            rs485.write(sw.ID);
             
-            if( sw.triggered() > 0 ) { serial.write(1); }
-            else 					 { serial.write(0); }
+            if( sw.triggered() > 0 ) { rs485.write(1); }
+            else 					 { rs485.write(0); }
         }
     
         if(anyClass instanceof Memory) {	
@@ -352,9 +473,9 @@ void setSwitches(RailItem anyClass) {
                 for(int k=0;k<255;k++) {
                     anyClass = railItems.get(k);									 // use anyClass to select all switches
                     if(tmp == anyClass.getID() && anyClass instanceof Switch) {		// compares the elements out if the array with all switches' IDs
-                        serial.write(turnoutInstruction);
-                        serial.write(tmp);
-                        serial.write(tmpStates[j]);
+                        rs485.write(turnoutInstruction);
+                        rs485.write(tmp);
+                        rs485.write(tmpStates[j]);
                         
                         anyClass.setState(tmpStates[j]); } } }						 // set the state of the switch to the elements out of the array
             catch(IndexOutOfBoundsException e) {
@@ -376,9 +497,9 @@ void setSignals(RailItem anyClass) {
                 for(int k = 0 ; k < 255 ; k++ ) {
                     anyClass = railItems.get(k);									// use anyClass to select all signals
                     if(tmp == anyClass.getID() && anyClass instanceof Signal) {		// compares the elements out if the array with all switches' IDs
-                        serial.write(signalInstruction);
-                        serial.write(tmp);
-                        serial.write(tmpStates[j]);
+                        rs485.write(signalInstruction);
+                        rs485.write(tmp);
+                        rs485.write(tmpStates[j]);
                         
                         anyClass.setState(tmpStates[j]); } } }						// set the state of the switch to the elements out of the array
             catch(IndexOutOfBoundsException e) {
